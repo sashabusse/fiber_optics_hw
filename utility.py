@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import signal
 
 
 def A2db(A):
@@ -27,3 +28,9 @@ def snr2osnr_db(snr_db, fs):
 
 def EbN0_db(snr_db, M):
     return snr_db - 10*np.log10(np.log2(M))
+
+
+def psd_db(s, nfft=2048, window='blackman', fs=1.):
+    f, psd = signal.welch(s, fs=fs, window=window,
+                          nperseg=nfft, return_onesided=False)
+    return np.fft.fftshift(f), np.fft.fftshift(P2db(psd))

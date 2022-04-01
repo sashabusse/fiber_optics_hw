@@ -1,6 +1,7 @@
 import functools
 import warnings
 import numpy as np
+import pandas as pd
 from scipy import optimize
 
 
@@ -50,10 +51,22 @@ def Comb(n, k):
     return Comb(n-1, k-1) + Comb(n-1, k)
 
 
-def idx(x, w, y_sz):
-    assert w == sum(x), "Bad Sequence w != sum(x): {} != {}, x={}".format(
-        w, np.sum(x), x)
-    w = np.sum(x)
+def idx(x, w, y_sz, warnings_on=False):
+
+    if w != np.sum(x):
+        if warnings_on:
+            warnings.warn("Bad Sequence w != sum(x): {} != {}, ignoring {} MSB ones".format(
+                w, np.sum(x), x, np.sum(x)-w),
+                DeprecationWarning, stacklevel=2)
+
+        to_ignore = np.sum(x)-w
+        for i in range(x.size):
+            if x[-i] == 1:
+                x[-i] = 0
+                to_ignore -= 1
+                if to_ignore == 0:
+                    break
+
     res = 0
     x_sum = 0
     for i in range(x.size):
@@ -114,18 +127,24 @@ def ccdm_decode(code_bits, one_bits, d_sz, c_sz):
 
 
 def ccdm_make_cfg_min_bits(d_sz, c_sz):
+    assert Comb(
+        c_sz, c_sz//2) >= 2**d_sz, 'c_sz={} is too low to be used'.format(c_sz)
+
     one_bits = 1
     while Comb(c_sz, one_bits) < 2**d_sz:
         one_bits += 1
 
-    return {
+    return pd.Series({
         "one_bits": one_bits,
         "d_sz": d_sz,
         "c_sz": c_sz
-    }
+    })
 
 
 def ccdm_make_cfg_probability(d_sz, c_sz, p0):
+    assert Comb(
+        c_sz, c_sz//2) >= 2**d_sz, 'c_sz={} is too low to be used'.format(c_sz)
+
     one_bits_min = 1
     while Comb(c_sz, one_bits_min) < 2**d_sz:
         one_bits_min += 1
@@ -133,8 +152,13 @@ def ccdm_make_cfg_probability(d_sz, c_sz, p0):
     p1 = 1-p0
     one_bits_prob = np.rint(p1*c_sz)
 
-    return {
+    if one_bits_min > one_bits_prob:
+        warnings.warn('one_bits_min = {} > one_bits_prob = {}, falling to one_bits_min, p0={:.2f} (desired p0={:.2f})'.format(
+            one_bits_min, one_bits_prob, 1-one_bits_min/c_sz, p0),
+            DeprecationWarning, stacklevel=2)
+
+    return pd.Series({
         "one_bits": max(one_bits_min, one_bits_prob),
         "d_sz": d_sz,
         "c_sz": c_sz
-    }
+    })
