@@ -34,3 +34,16 @@ def psd_db(s, nfft=2048, window='blackman', fs=1.):
     f, psd = signal.welch(s, fs=fs, window=window,
                           nperseg=nfft, return_onesided=False)
     return np.fft.fftshift(f), np.fft.fftshift(P2db(psd))
+
+
+def nmse(x, y):
+    x = np.array(x, dtype=complex)
+    y = np.array(y, dtype=complex)
+    e = x-y
+    ee = np.mean(e * e.conj())
+    xx = np.mean(x * x.conj())
+    return np.abs(ee/xx)
+
+
+def nmse_db(x, y):
+    return P2db(nmse(x, y))

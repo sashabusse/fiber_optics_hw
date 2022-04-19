@@ -101,10 +101,43 @@ def qam_demapping(iq, order):
     for j in range(bits):
         b_out[j::bits] = (sym >> j) & 1
 
-    # demodulate iq to bits
-    # for i in range(0, iq.size):
-    #    sym = np.argmin(np.abs(sym2iq_map - iq[i]))
-    #    for j in range(bits):
-    #        b_out[bits*i + j] = (sym >> j) & 1
-
     return b_out
+
+
+def qam16_demap_labeled(iq, labels):
+    labels_idx = ((labels.real+3)//2 + (labels.imag+3)//2 * 4).astype(int)
+    labels_avg = np.zeros(16, dtype=complex)
+    for i in range(labels_avg.size):
+        labels_avg[i] = np.mean(iq[labels_idx == i])
+
+    idx_demaped = np.zeros_like(labels_idx)
+    iq_demaped = np.zeros_like(iq)
+    for i in range(iq.size):
+        idx_demaped[i] = np.argmin(np.abs(labels_avg - iq[i]))
+        iq_demaped[i] = ((idx_demaped[i] % 4)*2 - 3) + \
+            1j*((idx_demaped[i]//4)*2 - 3)
+
+    return idx_demaped, iq_demaped
+
+
+def qam16_ser_labeled(iq, labels):
+    _, iq_demaped = qam16_demap_labeled(iq, labels)
+
+    ser = np.mean((labels-iq_demaped) != 0)
+    return ser
+
+
+def qam16_demap2bits_labeled(iq, labels_iq, labels_bits):
+    labels_idx = (labels_iq.real+3)//2 + (labels_iq.imag+3)//2 * 4
+    idx2bits = np.zeros((16, 4), dtype=int)
+    for i in range(idx2bits.shape[0]):
+        w = np.argwhere(labels_idx == i)[0][0]
+        idx2bits[i] = labels_bits[4*w:4*(w+1)]
+
+    idx_demaped, _ = qam16_demap_labeled(iq, labels_iq)
+
+    bits_out = np.zeros(4*iq.size, dtype=int)
+    for i in range(idx_demaped.size):
+        bits_out[i*4:(i+1)*4] = idx2bits[idx_demaped[i]]
+
+    return bits_out
