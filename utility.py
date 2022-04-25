@@ -36,14 +36,14 @@ def psd_db(s, nfft=2048, window='blackman', fs=1.):
     return np.fft.fftshift(f), np.fft.fftshift(P2db(psd))
 
 
-def nmse(x, y):
-    x = np.array(x, dtype=complex)
-    y = np.array(y, dtype=complex)
-    e = x-y
+def nmse(ref, est):
+    ref = np.array(ref, dtype=complex)
+    est = np.array(est, dtype=complex)
+    e = ref-est
     ee = np.mean(e * e.conj())
-    xx = np.mean(x * x.conj())
-    return np.abs(ee/xx)
+    norm = np.mean(ref * ref.conj())
+    return np.abs(ee/norm)
 
 
-def nmse_db(x, y):
-    return P2db(nmse(x, y))
+def nmse_db(ref, est):
+    return P2db(nmse(ref, est))
